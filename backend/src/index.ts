@@ -31,22 +31,16 @@ if (FE_PROD_ORIGIN) {
 }
 
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:5173', // local dev
-      process.env.FRONTEND_PROD_URL, // e.g., 'https://your-frontend.onrender.com'
-    ].filter(Boolean); // remove undefined
-
+  origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS: ' + origin));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 
 // --- END: CORRECTED CORS CONFIGURATION ---
 
