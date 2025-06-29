@@ -34,10 +34,11 @@ const startServer = async () => {
     app.use('/api/transactions', transactionRoutes);
     app.use('/api/user-config', userConfigRoutes);
 
-    // Start server
+    // Use dynamic port from Render
+    const PORT = process.env.PORT || 8080;
     const server = http.createServer(app);
-    server.listen(8080, () => {
-      console.log('Server running on http://localhost:8080');
+    server.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
     });
 
   } catch (err) {
