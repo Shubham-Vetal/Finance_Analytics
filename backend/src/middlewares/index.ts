@@ -10,8 +10,7 @@ export const isAuthenticated = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1]; // Bearer <token>
+    const token = req.cookies['AUTH-TOKEN'];
 
     if (!token) {
       res.status(403).json({ message: 'No token provided.' });
@@ -26,7 +25,9 @@ export const isAuthenticated = async (
       return;
     }
 
+    // Attach user to request
     req.identity = user;
+
     next();
   } catch (error) {
     console.error('JWT verification error:', error);

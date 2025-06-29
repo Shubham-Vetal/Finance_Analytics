@@ -4,14 +4,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { get } from 'lodash';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Ensure this is a strong secret from your .env
-const JWT_EXPIRES_IN = '1d'; // JWT expiration time
-
-
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-
-const COOKIE_DOMAIN = IS_PRODUCTION ? '.onrender.com' : 'localhost';
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_EXPIRES_IN = '1d';
 
 // ------------------- Register -------------------
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -54,7 +48,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await getUserByEmail(email).select('+authenticationPassword');
+    const user = await getUserByEmail(email); // make sure this selects +authenticationPassword
     if (!user || !user.authenticationPassword) {
       res.status(400).json({ message: 'Invalid credentials.' });
       return;
@@ -70,17 +64,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    const userWithoutPassword = user.toObject();
-    delete userWithoutPassword.authenticationPassword;
+    res.cookie('AUTH-TOKEN', token, {
+      httpOnly: true,
+      path: '/',
+      domain: 'localhost',
+      sameSite: 'lax',
+    });
 
-    // ✅ Send token in body, not in cookies
-    res.status(200).json({ token, user: userWithoutPassword });
+    res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
-
 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -102,15 +98,9 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     if (username) updates.username = username;
     if (email) updates.email = email;
 
-    // Assuming user.id is already a string or can be converted.
-    // If updateUserById expects Mongoose ObjectId, convert user._id
-    const updatedUser = await updateUserById(user._id.toString(), updates);
+    const updatedUser = await updateUserById(user.id, updates);
 
-    // Remove password hash before sending user object to frontend
-    const userWithoutPassword = updatedUser.toObject();
-    delete userWithoutPassword.authenticationPassword;
-
-    res.status(200).json({ message: 'User updated successfully', user: userWithoutPassword });
+    res.status(200).json({ message: 'User updated successfully', user: updatedUser });
   } catch (error) {
     console.error('Update error:', error);
     res.status(500).json({ message: 'Something went wrong' });
@@ -119,7 +109,13 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-   
+    res.clearCookie('AUTH-TOKEN', {
+      httpOnly: true,
+      path: '/',
+      domain: 'localhost',
+      sameSite: 'lax',
+    });
+
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
@@ -127,12 +123,9 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-
 export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(' ')[1]; // Bearer <token>
-
+    const token = req.cookies['AUTH-TOKEN'];
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
       return;
@@ -146,22 +139,18 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const userWithoutPassword = user.toObject();
-    delete userWithoutPassword.authenticationPassword;
-
-    res.status(200).json({ user: userWithoutPassword });
+    res.status(200).json({ user });
   } catch (error) {
     console.error('GetCurrentUser error:', error);
     res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
 
-
 // ------------------- Change Password -------------------
 
 export const changePassword = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = req.identity; // This should be set by isAuthenticated middleware
+    const user = req.identity;
     const { currentPassword, newPassword } = req.body;
 
     if (!user || !user._id || !currentPassword || !newPassword) {
@@ -169,7 +158,6 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Ensure user.authenticationPassword is fetched by the isAuthenticated middleware for comparison
     const isMatch = await bcrypt.compare(currentPassword, user.authenticationPassword);
     if (!isMatch) {
       res.status(403).json({ message: 'Current password is incorrect.' });
