@@ -1,4 +1,3 @@
-// src/middleware/isAuthenticated.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { getUserById } from '../db/users';
@@ -20,8 +19,8 @@ export const isAuthenticated = async (
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    const user = await getUserById(decoded.id).select('+authenticationPassword');
 
+    const user = await getUserById(decoded.id).select('+authenticationPassword');
     if (!user) {
       res.status(403).json({ message: 'Invalid or expired token.' });
       return;
