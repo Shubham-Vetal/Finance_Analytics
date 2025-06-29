@@ -77,10 +77,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 res.cookie('AUTH-TOKEN', token, {
   httpOnly: true,
   path: '/',
-  ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN }), // ⬅️ only sets if defined
-  secure: IS_PRODUCTION,
-  sameSite: IS_PRODUCTION ? 'none' : 'lax',
-  maxAge: 1000 * 60 * 60 * 24,
+  domain: '.onrender.com',              // ✅ include dot for subdomains (IMPORTANT)
+  secure: true,                         // ✅ cookie only sent over HTTPS
+  sameSite: 'none',                     // ✅ allows cross-origin cookies
+  maxAge: 1000 * 60 * 60 * 24,          // ✅ 1 day
 });
 
 
