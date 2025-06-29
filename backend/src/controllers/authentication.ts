@@ -4,8 +4,18 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { get } from 'lodash';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
-const JWT_EXPIRES_IN = '1d';
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Ensure this is a strong secret from your .env
+const JWT_EXPIRES_IN = '1d'; // JWT expiration time
+
+// --- NEW: Determine if we are in production environment ---
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// --- NEW: Dynamically set the cookie domain ---
+// For Render deployment, the domain should be '.onrender.com' (note the leading dot)
+// This allows the cookie to be sent to subdomains like 'finance-analytics-backend.onrender.com'
+// and 'your-frontend-app.onrender.com'.
+// For local development, it remains 'localhost'.
+const COOKIE_DOMAIN = IS_PRODUCTION ? '.onrender.com' : 'localhost';
 
 // ------------------- Register -------------------
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -48,7 +58,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await getUserByEmail(email); // make sure this selects +authenticationPassword
+    // Ensure that getUserByEmail fetches the password hash for comparison
+    const user = await getUserByEmail(email).select('+authenticationPassword');
     if (!user || !user.authenticationPassword) {
       res.status(400).json({ message: 'Invalid credentials.' });
       return;
@@ -65,13 +76,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     res.cookie('AUTH-TOKEN', token, {
-      httpOnly: true,
-      path: '/',
-      domain: 'localhost',
-      sameSite: 'lax',
+      httpOnly: true, // Prevents client-side JavaScript access to the cookie
+      path: '/',      // Cookie is valid for all paths
+      domain: COOKIE_DOMAIN, // ✨ FIXED: Dynamic domain for cross-origin use
+      secure: IS_PRODUCTION, // ✨ FIXED: Only send over HTTPS in production
+      sameSite: IS_PRODUCTION ? 'none' : 'lax', // ✨ FIXED: 'none' for cross-site (required with secure:true)
+      maxAge: 1000 * 60 * 60 * 24 // Matches '1d' expiry
     });
 
-    res.status(200).json({ message: 'Login successful', user });
+    // Remove password hash before sending user object to frontend for security
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.authenticationPassword;
+
+    res.status(200).json({ message: 'Login successful', user: userWithoutPassword });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Something went wrong' });
@@ -98,9 +115,15 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     if (username) updates.username = username;
     if (email) updates.email = email;
 
-    const updatedUser = await updateUserById(user.id, updates);
+    // Assuming user.id is already a string or can be converted.
+    // If updateUserById expects Mongoose ObjectId, convert user._id
+    const updatedUser = await updateUserById(user._id.toString(), updates);
 
-    res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+    // Remove password hash before sending user object to frontend
+    const userWithoutPassword = updatedUser.toObject();
+    delete userWithoutPassword.authenticationPassword;
+
+    res.status(200).json({ message: 'User updated successfully', user: userWithoutPassword });
   } catch (error) {
     console.error('Update error:', error);
     res.status(500).json({ message: 'Something went wrong' });
@@ -112,8 +135,9 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.clearCookie('AUTH-TOKEN', {
       httpOnly: true,
       path: '/',
-      domain: 'localhost',
-      sameSite: 'lax',
+      domain: COOKIE_DOMAIN, // ✨ FIXED: Dynamic domain for cross-origin use
+      secure: IS_PRODUCTION, // ✨ FIXED: Only send over HTTPS in production
+      sameSite: IS_PRODUCTION ? 'none' : 'lax', // ✨ FIXED: 'none' for cross-site
     });
 
     res.status(200).json({ message: 'Logged out successfully' });
@@ -125,6 +149,10 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
 
 export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Note: If you add `isAuthenticated` middleware to `/auth/me` as recommended,
+    // you might be able to get user directly from `req.identity` here,
+    // making the token verification redundant in this controller.
+    // For now, keeping the direct token check as per your original code.
     const token = req.cookies['AUTH-TOKEN'];
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
@@ -139,7 +167,11 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    res.status(200).json({ user });
+    // Remove password hash before sending user object to frontend
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.authenticationPassword;
+
+    res.status(200).json({ user: userWithoutPassword });
   } catch (error) {
     console.error('GetCurrentUser error:', error);
     res.status(401).json({ message: 'Invalid or expired token' });
@@ -150,7 +182,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
 
 export const changePassword = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = req.identity;
+    const user = req.identity; // This should be set by isAuthenticated middleware
     const { currentPassword, newPassword } = req.body;
 
     if (!user || !user._id || !currentPassword || !newPassword) {
@@ -158,6 +190,7 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    // Ensure user.authenticationPassword is fetched by the isAuthenticated middleware for comparison
     const isMatch = await bcrypt.compare(currentPassword, user.authenticationPassword);
     if (!isMatch) {
       res.status(403).json({ message: 'Current password is incorrect.' });

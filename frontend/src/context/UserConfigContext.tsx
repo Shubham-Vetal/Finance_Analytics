@@ -1,6 +1,6 @@
 // src/context/UserConfigContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import axios from '@/lib/axios';
 
 // Define the shape of the configuration data
 interface UserConfig {

@@ -1,6 +1,6 @@
 // src/context/UserContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from '../lib/axios';
+import axios from '@/lib/axios';
 
 // Your User shape
 interface User {
