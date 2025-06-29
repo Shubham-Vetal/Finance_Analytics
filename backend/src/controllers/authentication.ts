@@ -74,15 +74,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const token = jwt.sign({ id: user._id }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
-
-   res.cookie('AUTH-TOKEN', token, {
+res.cookie('AUTH-TOKEN', token, {
   httpOnly: true,
   path: '/',
-  domain: COOKIE_DOMAIN, // ✅ now undefined in dev, '.onrender.com' in prod
+  ...(COOKIE_DOMAIN && { domain: COOKIE_DOMAIN }), // ⬅️ only sets if defined
   secure: IS_PRODUCTION,
   sameSite: IS_PRODUCTION ? 'none' : 'lax',
-  maxAge: 1000 * 60 * 60 * 24, // 1 day
+  maxAge: 1000 * 60 * 60 * 24,
 });
+
 
     // Remove password hash before sending user object to frontend for security
     const userWithoutPassword = user.toObject();
