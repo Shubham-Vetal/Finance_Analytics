@@ -75,14 +75,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    res.cookie('AUTH-TOKEN', token, {
-      httpOnly: true, // Prevents client-side JavaScript access to the cookie
-      path: '/',      // Cookie is valid for all paths
-      domain: COOKIE_DOMAIN, // ✨ FIXED: Dynamic domain for cross-origin use
-      secure: IS_PRODUCTION, // ✨ FIXED: Only send over HTTPS in production
-      sameSite: IS_PRODUCTION ? 'none' : 'lax', // ✨ FIXED: 'none' for cross-site (required with secure:true)
-      maxAge: 1000 * 60 * 60 * 24 // Matches '1d' expiry
-    });
+   res.cookie('AUTH-TOKEN', token, {
+  httpOnly: true,
+  path: '/',
+  domain: COOKIE_DOMAIN, // ✅ now undefined in dev, '.onrender.com' in prod
+  secure: IS_PRODUCTION,
+  sameSite: IS_PRODUCTION ? 'none' : 'lax',
+  maxAge: 1000 * 60 * 60 * 24, // 1 day
+});
 
     // Remove password hash before sending user object to frontend for security
     const userWithoutPassword = user.toObject();

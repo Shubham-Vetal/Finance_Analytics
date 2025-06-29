@@ -31,11 +31,23 @@ if (FE_PROD_ORIGIN) {
 }
 
 app.use(cors({
-  origin: allowedOrigins, // ✨ FIX: Dynamically allows both dev and prod frontend origins
-  credentials: true,      // Essential for allowing cookies to be sent and received
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Include all HTTP methods your API uses
-  allowedHeaders: ['Content-Type', 'Authorization'], // Add any specific headers your frontend sends
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:5173', // local dev
+      process.env.FRONTEND_PROD_URL, // e.g., 'https://your-frontend.onrender.com'
+    ].filter(Boolean); // remove undefined
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 // --- END: CORRECTED CORS CONFIGURATION ---
 
 app.use(compression());

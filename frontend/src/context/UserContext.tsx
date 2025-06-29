@@ -7,6 +7,7 @@ interface User {
   _id: string;
   username: string;
   email: string;
+  
 }
 
 //  Shapes of the server’s JSON
@@ -55,10 +56,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
     }
   };
-
-  const register = async (data: RegisterData) => {
+ const register = async (data: RegisterData) => {
     const res = await axios.post<RegisterResponse>('/auth/register', data);
-    console.log(res.data.message);    // now fully typed
     setUser(res.data.user);
   };
 
