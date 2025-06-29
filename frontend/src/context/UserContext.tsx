@@ -17,11 +17,9 @@ interface MeResponse {
 interface RegisterResponse {
   message: string;
   user: User;
-    token: string;
 }
 interface LoginResponse {
   user: User;
-    token: string;
 }
 
 //  Credentials and register data
@@ -58,16 +56,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
     }
   };
-const register = async (data: RegisterData) => {
-  const res = await axios.post<RegisterResponse>('/auth/register', data);
-  localStorage.setItem('token', res.data.token); // 👈 store token
-  setUser(res.data.user);
-};
+ const register = async (data: RegisterData) => {
+    const res = await axios.post<RegisterResponse>('/auth/register', data);
+    setUser(res.data.user);
+  };
+
   const login = async (data: AuthCredentials) => {
-  const res = await axios.post<LoginResponse>('/auth/login', data);
-  localStorage.setItem('token', res.data.token); // 👈 store token
-  setUser(res.data.user);
-};
+    const res = await axios.post<LoginResponse>('/auth/login', data);
+    setUser(res.data.user);
+  };
 
   const logout = async () => {
     await axios.post('/auth/logout');
