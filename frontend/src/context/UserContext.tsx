@@ -1,28 +1,25 @@
-// src/context/UserContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from '@/lib/axios';
 
-// Your User shape
 interface User {
   _id: string;
   username: string;
   email: string;
-  
 }
 
-//  Shapes of the server’s JSON
 interface MeResponse {
   user: User;
 }
 interface RegisterResponse {
   message: string;
   user: User;
+  token: string;
 }
 interface LoginResponse {
   user: User;
+  token: string;
 }
 
-//  Credentials and register data
 interface AuthCredentials {
   email: string;
   password: string;
@@ -31,7 +28,6 @@ interface RegisterData extends AuthCredentials {
   username: string;
 }
 
-//  Context API signature
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
@@ -48,6 +44,16 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  // Attach token to every request
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, []);
+
   const fetchUser = async () => {
     try {
       const res = await axios.get<MeResponse>('/auth/me');
@@ -56,18 +62,25 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
     }
   };
- const register = async (data: RegisterData) => {
+
+  const register = async (data: RegisterData) => {
     const res = await axios.post<RegisterResponse>('/auth/register', data);
+    localStorage.setItem('token', res.data.token); // ✅ store token
+    axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
     setUser(res.data.user);
   };
 
   const login = async (data: AuthCredentials) => {
     const res = await axios.post<LoginResponse>('/auth/login', data);
+    localStorage.setItem('token', res.data.token); // ✅ store token
+    axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
     setUser(res.data.user);
   };
 
   const logout = async () => {
-    await axios.post('/auth/logout');
+    await axios.post('/auth/logout'); // Optional
+    localStorage.removeItem('token'); // ✅ remove token
+    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
@@ -75,12 +88,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const res = await axios.put<MeResponse>('/auth/update', updatedUser);
     setUser(res.data.user);
   };
+
   const changePassword = async (currentPassword: string, newPassword: string) => {
-  await axios.put('/auth/change-password', {
-    currentPassword,
-    newPassword,
-  });
-};
+    await axios.put('/auth/change-password', { currentPassword, newPassword });
+  };
 
   useEffect(() => {
     fetchUser();
@@ -88,7 +99,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider
-      value={{ user, setUser, fetchUser, register, login, logout, updateUser,changePassword  }}
+      value={{ user, setUser, fetchUser, register, login, logout, updateUser, changePassword }}
     >
       {children}
     </UserContext.Provider>

@@ -7,14 +7,10 @@ import { get } from 'lodash';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret'; // Ensure this is a strong secret from your .env
 const JWT_EXPIRES_IN = '1d'; // JWT expiration time
 
-// --- NEW: Determine if we are in production environment ---
+
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-// --- NEW: Dynamically set the cookie domain ---
-// For Render deployment, the domain should be '.onrender.com' (note the leading dot)
-// This allows the cookie to be sent to subdomains like 'finance-analytics-backend.onrender.com'
-// and 'your-frontend-app.onrender.com'.
-// For local development, it remains 'localhost'.
+
 const COOKIE_DOMAIN = IS_PRODUCTION ? '.onrender.com' : 'localhost';
 
 // ------------------- Register -------------------
@@ -58,7 +54,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Ensure that getUserByEmail fetches the password hash for comparison
     const user = await getUserByEmail(email).select('+authenticationPassword');
     if (!user || !user.authenticationPassword) {
       res.status(400).json({ message: 'Invalid credentials.' });
@@ -74,26 +69,18 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const token = jwt.sign({ id: user._id }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
-res.cookie('AUTH-TOKEN', token, {
-  httpOnly: true,
-  path: '/',
-  domain: '.onrender.com',              // ✅ include dot for subdomains (IMPORTANT)
-  secure: true,                         // ✅ cookie only sent over HTTPS
-  sameSite: 'none',                     // ✅ allows cross-origin cookies
-  maxAge: 1000 * 60 * 60 * 24,          // ✅ 1 day
-});
 
-
-    // Remove password hash before sending user object to frontend for security
     const userWithoutPassword = user.toObject();
     delete userWithoutPassword.authenticationPassword;
 
-    res.status(200).json({ message: 'Login successful', user: userWithoutPassword });
+    // ✅ Send token in body, not in cookies
+    res.status(200).json({ token, user: userWithoutPassword });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+
 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -132,14 +119,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
-    res.clearCookie('AUTH-TOKEN', {
-      httpOnly: true,
-      path: '/',
-      domain: COOKIE_DOMAIN, // ✨ FIXED: Dynamic domain for cross-origin use
-      secure: IS_PRODUCTION, // ✨ FIXED: Only send over HTTPS in production
-      sameSite: IS_PRODUCTION ? 'none' : 'lax', // ✨ FIXED: 'none' for cross-site
-    });
-
+   
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
@@ -147,13 +127,12 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+
 export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Note: If you add `isAuthenticated` middleware to `/auth/me` as recommended,
-    // you might be able to get user directly from `req.identity` here,
-    // making the token verification redundant in this controller.
-    // For now, keeping the direct token check as per your original code.
-    const token = req.cookies['AUTH-TOKEN'];
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1]; // Bearer <token>
+
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
       return;
@@ -167,7 +146,6 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Remove password hash before sending user object to frontend
     const userWithoutPassword = user.toObject();
     delete userWithoutPassword.authenticationPassword;
 
@@ -177,6 +155,7 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
     res.status(401).json({ message: 'Invalid or expired token' });
   }
 };
+
 
 // ------------------- Change Password -------------------
 
