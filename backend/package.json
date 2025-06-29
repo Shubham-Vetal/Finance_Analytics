@@ -2,9 +2,9 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Financial backend API",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "nodemon",
+    "start": "node dist/index.js",
     "dev": "nodemon",
     "build": "tsc",
     "serve": "node dist/index.js",
