@@ -9,4 +9,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    outDir: 'dist', // Required for Render static deployment
+    sourcemap: false, // Optional: remove if you want production sourcemaps
+  },
+  server: {
+    port: 5173, // Optional: keep default Vite dev port
+  },
 })
