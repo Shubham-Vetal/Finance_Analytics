@@ -64,12 +64,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    res.cookie('AUTH-TOKEN', token, {
+ res.cookie('AUTH-TOKEN', token, {
       httpOnly: true,
-      secure: true,                        // ✅ Required on HTTPS
+      secure: true,
       sameSite: 'none',
       path: '/',
-      domain: 'finance-analytics.onrender.com', // ✅ Must match frontend domain
     });
 
     console.log('✅ AUTH-TOKEN cookie set for domain finance-analytics.onrender.com');
@@ -116,10 +115,10 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.clearCookie('AUTH-TOKEN', {
       httpOnly: true,
       secure: true,
-      sameSite: 'none', // must match login
+      sameSite: 'none',
       path: '/',
-      domain: 'finance-analytics.onrender.com', // ✅ matches the login cookie domain
     });
+
 
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
