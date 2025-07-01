@@ -6,41 +6,31 @@ import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import mongoose from 'mongoose';
+
 import authRoutes from './router/index';
 import transactionRoutes from './router/transaction.routes';
 import userConfigRoutes from './router/userConfig.routes';
 
 console.log('🔥 Server entry point reached');
 
-dotenv.config(); // Ensure this is at the very top to load environment variables
+// Load env variables early
+dotenv.config();
 
 const app = express();
 
-// --- START: CORRECTED CORS CONFIGURATION ---
-// Determine frontend origins based on the environment
-const FE_DEV_ORIGIN = 'http://localhost:5173'; // Your React development server URL
+// Determine frontend origins
+const LOCAL_ORIGIN = 'http://localhost:5173';
+const PROD_ORIGIN = process.env.FRONTEND_PROD_URL || 'https://finance-analytics.onrender.com';
 
-// IMPORTANT: You MUST set 'FRONTEND_PROD_URL' as an environment variable
-// on your Render backend service dashboard. Its value should be the full HTTPS URL
-// of your deployed frontend (e.g., https://your-finance-frontend.onrender.com).
-const FE_PROD_ORIGIN = process.env.FRONTEND_PROD_URL;
+const allowedOrigins = [LOCAL_ORIGIN, PROD_ORIGIN];
 
-const allowedOrigins = [FE_DEV_ORIGIN];
-if (FE_PROD_ORIGIN) {
-  allowedOrigins.push(FE_PROD_ORIGIN);
-}
-
+// ✅ Use simplified CORS setup
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:5173', // local dev
-      process.env.FRONTEND_PROD_URL, // e.g., 'https://your-frontend.onrender.com'
-    ].filter(Boolean); // remove undefined
-
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('❌ Not allowed by CORS: ' + origin));
     }
   },
   credentials: true,
@@ -48,37 +38,39 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// --- END: CORRECTED CORS CONFIGURATION ---
-
+// ✅ Middleware
 app.use(compression());
-app.use(cookieParser()); // Ensure cookieParser is placed before any routes that access req.cookies
-app.use(bodyParser.json()); // Parses incoming JSON requests
+app.use(cookieParser()); // Needed before routes access req.cookies
+app.use(bodyParser.json());
 
-const MONGO_URL = process.env.MONGO_URI; // Ensure MONGO_URI is set as an environment variable on Render
+// ✅ MongoDB connection
+const MONGO_URL = process.env.MONGO_URI;
+if (!MONGO_URL) {
+  console.error('❌ MONGO_URI is not set in environment variables.');
+  process.exit(1);
+}
 
 const startServer = async () => {
   try {
-    // Connect to MongoDB
     await mongoose.connect(MONGO_URL);
     console.log('✅ MongoDB Connected');
 
-    // Routes
-    app.use('/', authRoutes);
+    // ✅ API Routes
+    app.use('/', authRoutes); // /auth/*
     app.use('/api/transactions', transactionRoutes);
     app.use('/api/user-config', userConfigRoutes);
 
-    // Use dynamic port from Render (process.env.PORT) or default to 8080
+    // ✅ Start server
     const PORT = process.env.PORT || 8080;
     const server = http.createServer(app);
     server.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
 
   } catch (err) {
-    console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit the process with failure if MongoDB connection fails
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1);
   }
 };
 
-// Start everything
 startServer();
