@@ -94,7 +94,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ fetchUser runs only once on mount now
   useEffect(() => {
-    console.log('🔁 Checking session...');
     fetchUser();
   }, [fetchUser]);
 
