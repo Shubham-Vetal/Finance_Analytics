@@ -137,7 +137,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ searchTerm }) => {
       name: category,
       value: breakdownMap[category],
     })).sort((a, b) => b.value - a.value);
-    console.log("Expense Breakdown Data:", result); // Debugging
+    // console.log("Expense Breakdown Data:", result); // Debugging
     return result;
   }, [transactions]);
 
@@ -151,7 +151,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ searchTerm }) => {
       name: status.charAt(0).toUpperCase() + status.slice(1),
       value: statusMap[status],
     }));
-    console.log("Status Breakdown Data:", result); // Debugging
+    // console.log("Status Breakdown Data:", result); // Debugging
     return result;
   }, [transactions]);
 
@@ -160,7 +160,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ searchTerm }) => {
     if (transactions !== null) {
       setLoading(false);
     }
-    console.log("Transactions array updated:", transactions); // Debugging
+    // console.log("Transactions array updated:", transactions); // Debugging
   }, [transactions]);
 
   const renderLoadingState = () => (

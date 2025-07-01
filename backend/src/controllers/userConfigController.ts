@@ -29,11 +29,12 @@ export const getUserConfig = async (req: Request, res: Response): Promise<void> 
   try {
     const userId = req.identity?._id;
 
-    const config = await UserConfigModel.findOne({ user: userId });
+    let config = await UserConfigModel.findOne({ user: userId });
 
     if (!config) {
-      res.status(404).json({ message: 'No config found for user' });
-      return;
+      // Optionally create a default config
+      config = new UserConfigModel({ user: userId, csvColumns: [] });
+      await config.save();
     }
 
     res.status(200).json({ config });
@@ -42,3 +43,4 @@ export const getUserConfig = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+
