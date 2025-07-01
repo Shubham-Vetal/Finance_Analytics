@@ -64,14 +64,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresIn: JWT_EXPIRES_IN,
     });
 
- res.cookie('AUTH-TOKEN', token, {
-  httpOnly: true,
-  secure: true, 
-  sameSite: 'lax',
-  path: '/',
-  domain: 'finance-analytics.onrender.com', 
-});
-console.log('✅ Setting AUTH-TOKEN cookie for domain finance-analytics.onrender.com');
+    res.cookie('AUTH-TOKEN', token, {
+      httpOnly: true,
+      secure: true,                        // ✅ Required on HTTPS
+      sameSite: 'none',
+      path: '/',
+      domain: 'finance-analytics.onrender.com', // ✅ Must match frontend domain
+    });
+
+    console.log('✅ AUTH-TOKEN cookie set for domain finance-analytics.onrender.com');
 
     res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
@@ -79,6 +80,7 @@ console.log('✅ Setting AUTH-TOKEN cookie for domain finance-analytics.onrender
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+
 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -113,9 +115,10 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     res.clearCookie('AUTH-TOKEN', {
       httpOnly: true,
+      secure: true,
+      sameSite: 'none', // must match login
       path: '/',
-      domain: 'localhost',
-      sameSite: 'lax',
+      domain: 'finance-analytics.onrender.com', // ✅ matches the login cookie domain
     });
 
     res.status(200).json({ message: 'Logged out successfully' });
@@ -124,6 +127,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: 'Something went wrong' });
   }
 };
+
 
 export const getCurrentUser = async (req: Request, res: Response): Promise<void> => {
   try {
