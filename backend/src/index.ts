@@ -14,7 +14,7 @@ import userConfigRoutes from './router/userConfig.routes';
 // Load environment variables early
 dotenv.config();
 
-console.log('🔥 Server entry point reached');
+
 
 const app = express();
 
