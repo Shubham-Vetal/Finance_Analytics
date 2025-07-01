@@ -2,13 +2,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from '@/lib/axios';
 
-// --- User and API response types ---
+// Your User shape
 interface User {
   _id: string;
   username: string;
   email: string;
 }
 
+//  Shapes of the server’s JSON
 interface MeResponse {
   user: User;
 }
@@ -20,6 +21,7 @@ interface LoginResponse {
   user: User;
 }
 
+//  Credentials and register data
 interface AuthCredentials {
   email: string;
   password: string;
@@ -28,6 +30,7 @@ interface RegisterData extends AuthCredentials {
   username: string;
 }
 
+//  Context API signature
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
@@ -39,7 +42,6 @@ interface UserContextType {
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
-// --- Context creation ---
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
@@ -55,13 +57,14 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (data: RegisterData) => {
-    await axios.post<RegisterResponse>('/auth/register', data);
-    await fetchUser(); // ✅ fetch fresh user after setting cookie
+    const res = await axios.post<RegisterResponse>('/auth/register', data);
+    console.log(res.data.message);    // now fully typed
+    setUser(res.data.user);
   };
 
   const login = async (data: AuthCredentials) => {
-    await axios.post<LoginResponse>('/auth/login', data);
-    await fetchUser(); // ✅ fetch fresh user after login cookie is set
+    const res = await axios.post<LoginResponse>('/auth/login', data);
+    setUser(res.data.user);
   };
 
   const logout = async () => {
@@ -73,30 +76,20 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const res = await axios.put<MeResponse>('/auth/update', updatedUser);
     setUser(res.data.user);
   };
-
   const changePassword = async (currentPassword: string, newPassword: string) => {
-    await axios.put('/auth/change-password', {
-      currentPassword,
-      newPassword,
-    });
-  };
+  await axios.put('/auth/change-password', {
+    currentPassword,
+    newPassword,
+  });
+};
 
   useEffect(() => {
-    fetchUser(); // Check session on initial load
+    fetchUser();
   }, []);
 
   return (
     <UserContext.Provider
-      value={{
-        user,
-        setUser,
-        fetchUser,
-        register,
-        login,
-        logout,
-        updateUser,
-        changePassword,
-      }}
+      value={{ user, setUser, fetchUser, register, login, logout, updateUser,changePassword  }}
     >
       {children}
     </UserContext.Provider>
