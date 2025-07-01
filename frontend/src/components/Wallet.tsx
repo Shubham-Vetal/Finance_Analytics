@@ -105,7 +105,7 @@ const Wallet: React.FC<WalletProps> = ({ searchTerm }) => {
     }
 
 
-    console.log("🟩 Balance History Data for Chart:", history); // Debugging
+    // console.log("🟩 Balance History Data for Chart:", history); // Debugging
     return history;
   }, [transactions]); // Re-run when transactions change
 
