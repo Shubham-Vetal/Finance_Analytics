@@ -65,10 +65,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const register = async (data: RegisterData) => {
-    await axios.post<RegisterResponse>('/auth/register', data);
-    await fetchUser();
-  };
+const register = async (data: RegisterData) => {
+  try {
+    await axios.post<RegisterResponse>('/auth/register', data, {
+      withCredentials: true,
+    });
+    await login({ email: data.email, password: data.password }); 
+  } catch (err) {
+    console.error("Registration failed:", err);
+    throw err;
+  }
+};
+
+
 
   const login = async (data: AuthCredentials) => {
     await axios.post<LoginResponse>('/auth/login', data);
