@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react';
 import axios from '@/lib/axios';
 
 // --- User and API response types ---
@@ -46,7 +53,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fetchUser = async () => {
+  // ✅ useCallback prevents new function reference on every render
+  const fetchUser = useCallback(async () => {
     try {
       const res = await axios.get<MeResponse>('/auth/me');
       setUser(res.data.user);
@@ -55,16 +63,16 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const register = async (data: RegisterData) => {
     await axios.post<RegisterResponse>('/auth/register', data);
-    await fetchUser(); // ✅ fetch fresh user after setting cookie
+    await fetchUser();
   };
 
   const login = async (data: AuthCredentials) => {
     await axios.post<LoginResponse>('/auth/login', data);
-    await fetchUser(); // ✅ fetch fresh user after login
+    await fetchUser();
   };
 
   const logout = async () => {
@@ -84,10 +92,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  // ✅ fetchUser runs only once on mount now
   useEffect(() => {
     console.log('🔁 Checking session...');
     fetchUser();
-  }, []);
+  }, [fetchUser]);
 
   return (
     <UserContext.Provider
