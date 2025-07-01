@@ -7,17 +7,14 @@ interface UserConfig {
   csvColumns: string[];
 }
 
-// Define the shape of the API response for fetching config
 interface UserConfigResponse {
   config: UserConfig;
 }
 
-// Interface for the save config response, assuming it returns config and a message
 interface SaveUserConfigResponse {
   message: string;
   config: UserConfig;
 }
-
 
 interface UserConfigContextType {
   csvColumns: string[];
@@ -28,14 +25,20 @@ interface UserConfigContextType {
 
 const UserConfigContext = createContext<UserConfigContextType | undefined>(undefined);
 
+// Helper to compare arrays
+const arraysEqual = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
+
 export const UserConfigProvider = ({ children }: { children: ReactNode }) => {
   const [csvColumns, setCsvColumns] = useState<string[]>([]);
 
   const fetchConfig = async () => {
     try {
-      // Endpoint matched exactly to your Postman GET request
       const res = await axios.get<UserConfigResponse>('/api/user-config/auth/user-config/get');
-      setCsvColumns(res.data.config.csvColumns);
+      const newColumns = res.data.config.csvColumns;
+      if (!arraysEqual(newColumns, csvColumns)) {
+        setCsvColumns(newColumns);
+      }
     } catch (err) {
       console.log(' No config found or user not logged in, using default.');
       setCsvColumns([]);
@@ -44,9 +47,14 @@ export const UserConfigProvider = ({ children }: { children: ReactNode }) => {
 
   const saveConfig = async (columns: string[]) => {
     try {
-      // Endpoint updated to exactly match the combined backend routing, as clarified
-      const res = await axios.post<SaveUserConfigResponse>('/api/user-config/auth/user-config/save', { csvColumns: columns });
-      setCsvColumns(res.data.config.csvColumns); // Update state from saved config
+      const res = await axios.post<SaveUserConfigResponse>(
+        '/api/user-config/auth/user-config/save',
+        { csvColumns: columns }
+      );
+      const updatedColumns = res.data.config.csvColumns;
+      if (!arraysEqual(updatedColumns, csvColumns)) {
+        setCsvColumns(updatedColumns);
+      }
     } catch (err) {
       console.error(' Failed to save user config:', err);
     }
@@ -54,10 +62,13 @@ export const UserConfigProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <UserConfigContext.Provider value={{ csvColumns, setCsvColumns, fetchConfig, saveConfig }}>
+    <UserConfigContext.Provider
+      value={{ csvColumns, setCsvColumns, fetchConfig, saveConfig }}
+    >
       {children}
     </UserConfigContext.Provider>
   );
