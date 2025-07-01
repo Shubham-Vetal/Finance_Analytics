@@ -29,17 +29,10 @@ if (PROD_ORIGIN && !allowedOrigins.includes(PROD_ORIGIN)) {
 
 // ✅ CORS configuration
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('❌ Not allowed by CORS: ' + origin));
-    }
-  },
+  origin: ['https://finance-analytics.onrender.com', 'http://localhost:5173'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 
 // ✅ Middlewares
 app.use(compression());
