@@ -21,11 +21,10 @@ export interface SummaryItem {
 }
 
 export interface CategoryBreakdownItem {
-  _id: string; // Category name
+  _id: string;
   total: number;
 }
 
-// ✅ Re-added: Axios Response Types for backend summary and breakdown
 interface TransactionsResponse {
   data: Transaction[];
   total: number;
@@ -50,7 +49,7 @@ interface TransactionContextType {
   addTransaction: (data: Omit<Transaction, '_id' | 'user' | 'createdAt' | 'updatedAt' | '__v' | 'date'>) => Promise<void>;
   updateTransaction: (id: string, updatedData: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  getSummary: () => Promise<SummaryItem[]>; // This now calls the backend summary route
+  getSummary: () => Promise<SummaryItem[]>;
   getBreakdown: () => Promise<CategoryBreakdownItem[]>;
   setTransactions: (txs: Transaction[]) => void;
 }
@@ -59,15 +58,17 @@ const TransactionContext = createContext<TransactionContextType | undefined>(und
 
 export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [summaryCache, setSummaryCache] = useState<SummaryItem[] | null>(null);
+  const [transactionsFetched, setTransactionsFetched] = useState(false);
 
-  // Fetches all transactions from the backend
   const fetchTransactions = async () => {
+    if (transactionsFetched) return; // 🧠 Avoid repeat if already fetched
     try {
       const res = await axios.get<TransactionsResponse>('/api/transactions/auth/gettransactions');
       setTransactions(res.data.data);
+      setTransactionsFetched(true);
     } catch (error) {
       console.error('Failed to fetch transactions:', error);
-      // Optionally add a message here using useMessages if needed
     }
   };
 
@@ -80,7 +81,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         data
       );
       if (res.status === 201 || res.status === 200) {
-        await fetchTransactions(); // Re-fetch all transactions to keep main list updated
+        await fetchTransactions(); // Keep UI in sync
+        setSummaryCache(null); // 🧠 Invalidate summary cache
       }
     } catch (error) {
       console.error('Failed to add transaction:', error);
@@ -95,7 +97,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         updatedData
       );
       if (res.status === 200) {
-        await fetchTransactions(); // Re-fetch all transactions
+        await fetchTransactions();
+        setSummaryCache(null); // Invalidate cache
       }
     } catch (error) {
       console.error('Failed to update transaction:', error);
@@ -107,7 +110,8 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     try {
       const res = await axios.delete<{ message: string }>(`/api/transactions/auth/${id}`);
       if (res.status === 200) {
-        await fetchTransactions(); // Re-fetch all transactions
+        await fetchTransactions();
+        setSummaryCache(null); // Invalidate cache
       }
     } catch (error) {
       console.error('Failed to delete transaction:', error);
@@ -115,19 +119,18 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ MODIFIED getSummary: Now calling the backend summary API
   const getSummary = async (): Promise<SummaryItem[]> => {
+    if (summaryCache) return summaryCache;
     try {
       const res = await axios.get<SummaryResponse>('/api/transactions/auth/summary');
-      // Assuming your backend returns { summary: [{ _id: 'income', total: X }, { _id: 'expense', total: Y }] }
+      setSummaryCache(res.data.summary);
       return res.data.summary;
     } catch (error) {
       console.error('Failed to fetch summary from backend:', error);
-      return []; // Return empty array on error
+      return [];
     }
   };
 
-  // Keep getBreakdown as a backend call
   const getBreakdown = async (): Promise<CategoryBreakdownItem[]> => {
     try {
       const res = await axios.get<BreakdownResponse>('/api/transactions/auth/breakdown');
@@ -139,8 +142,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchTransactions();
-    // No need to call getSummary here, as components consuming it will call it themselves
+    fetchTransactions(); // only once
   }, []);
 
   return (
@@ -151,7 +153,7 @@ export const TransactionProvider = ({ children }: { children: ReactNode }) => {
         addTransaction,
         updateTransaction,
         deleteTransaction,
-        getSummary, // This is now your backend-driven summary
+        getSummary,
         getBreakdown,
         setTransactions
       }}
