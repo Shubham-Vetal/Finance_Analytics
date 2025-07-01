@@ -111,7 +111,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ searchTerm }) => {
       });
       data = Object.keys(yearlyMap).sort((a, b) => parseInt(a) - parseInt(b)).map(year => ({ periodLabel: year, ...yearlyMap[year] }));
     }
-    console.log("Aggregated Trend Data:", data); // Debugging
+    // console.log("Aggregated Trend Data:", data); // Debugging
     return data;
   }, [transactions, trendPeriod, selectedYear]);
 
