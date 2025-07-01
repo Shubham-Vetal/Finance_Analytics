@@ -64,12 +64,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    res.cookie('AUTH-TOKEN', token, {
-      httpOnly: true,
-      path: '/',
-      domain: 'localhost',
-      sameSite: 'lax',
-    });
+  res.cookie('AUTH-TOKEN', token, {
+  httpOnly: true,
+  secure: true, 
+  sameSite: 'lax',
+  path: '/',
+  domain: 'finance-analytics.onrender.com',
+});
+
 
     res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
