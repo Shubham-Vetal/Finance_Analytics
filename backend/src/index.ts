@@ -42,7 +42,7 @@ app.use(bodyParser.json());
 // ✅ MongoDB URI check
 const MONGO_URL = process.env.MONGO_URI;
 if (!MONGO_URL) {
-  console.error('❌ MONGO_URI is not set in environment variables.');
+  console.error(' MONGO_URI is not set in environment variables.');
   process.exit(1);
 }
 
