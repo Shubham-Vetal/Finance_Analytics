@@ -1,15 +1,13 @@
-// src/context/UserContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from '@/lib/axios';
 
-// Your User shape
+// --- User and API response types ---
 interface User {
   _id: string;
   username: string;
   email: string;
 }
 
-//  Shapes of the server’s JSON
 interface MeResponse {
   user: User;
 }
@@ -21,7 +19,6 @@ interface LoginResponse {
   user: User;
 }
 
-//  Credentials and register data
 interface AuthCredentials {
   email: string;
   password: string;
@@ -30,9 +27,9 @@ interface RegisterData extends AuthCredentials {
   username: string;
 }
 
-//  Context API signature
 interface UserContextType {
   user: User | null;
+  loading: boolean;
   setUser: (user: User | null) => void;
   fetchUser: () => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
@@ -42,10 +39,12 @@ interface UserContextType {
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
+// --- Context creation ---
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const fetchUser = async () => {
     try {
@@ -53,18 +52,19 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       setUser(res.data.user);
     } catch {
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (data: RegisterData) => {
-    const res = await axios.post<RegisterResponse>('/auth/register', data);
-    console.log(res.data.message);    // now fully typed
-    setUser(res.data.user);
+    await axios.post<RegisterResponse>('/auth/register', data);
+    await fetchUser(); // ✅ fetch fresh user after setting cookie
   };
 
   const login = async (data: AuthCredentials) => {
-    const res = await axios.post<LoginResponse>('/auth/login', data);
-    setUser(res.data.user);
+    await axios.post<LoginResponse>('/auth/login', data);
+    await fetchUser(); // ✅ fetch fresh user after login
   };
 
   const logout = async () => {
@@ -76,20 +76,32 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const res = await axios.put<MeResponse>('/auth/update', updatedUser);
     setUser(res.data.user);
   };
+
   const changePassword = async (currentPassword: string, newPassword: string) => {
-  await axios.put('/auth/change-password', {
-    currentPassword,
-    newPassword,
-  });
-};
+    await axios.put('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+  };
 
   useEffect(() => {
+    console.log('🔁 Checking session...');
     fetchUser();
   }, []);
 
   return (
     <UserContext.Provider
-      value={{ user, setUser, fetchUser, register, login, logout, updateUser,changePassword  }}
+      value={{
+        user,
+        loading,
+        setUser,
+        fetchUser,
+        register,
+        login,
+        logout,
+        updateUser,
+        changePassword,
+      }}
     >
       {children}
     </UserContext.Provider>
